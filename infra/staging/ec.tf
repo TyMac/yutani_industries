@@ -1,6 +1,6 @@
 resource "aws_instance" "yutani_home" {
     ami = "${var.yutani_home}"
-    instance_type = "t2.micro"
+    instance_type = "t2.nano"
     key_name = "${var.aws_key_name}"
     iam_instance_profile = "dna_inst_mgmt"
     vpc_security_group_ids = [
@@ -10,16 +10,18 @@ resource "aws_instance" "yutani_home" {
         "${aws_security_group.yutani_ssh.id}"
     ]
     
-    subnet_id = "${aws_subnet.private_1_subnet_us_east_1c.id}"
+    subnet_id = "${aws_subnet.public_1_subnet_us_east_1c.id}"
     associate_public_ip_address = true
     tags {
-        Name = "yutani_fe_homepage"
+        Name = "yutani_fe_homepage-${count.index}"
     }
     
     root_block_device {
         volume_size = "30"
         delete_on_termination = "true"
     }
+
+    count = "2"
     
     connection {
         type = "ssh"
@@ -33,7 +35,7 @@ resource "aws_instance" "yutani_home" {
         attributes_json = <<-EOF
                 {
                     "consul": {
-                            "servers": ["consul-0.yutani.it", "consul-1.yutani.it"]
+                            "servers": ["consul-0.yutani.it", "consul-1.yutani.it", "consul-2.yutani.it"]
                       }
                 }
                 EOF
@@ -52,7 +54,7 @@ resource "aws_instance" "yutani_home" {
 
 resource "aws_instance" "nginx_lb" {
     ami = "${var.nginx_lb}"
-    instance_type = "t2.micro"
+    instance_type = "t2.nano"
     key_name = "${var.aws_key_name}"
     iam_instance_profile = "dna_inst_mgmt"
     vpc_security_group_ids = [
@@ -62,16 +64,18 @@ resource "aws_instance" "nginx_lb" {
         "${aws_security_group.yutani_ssh.id}"
     ]
     
-    subnet_id = "${aws_subnet.private_1_subnet_us_east_1c.id}"
+    subnet_id = "${aws_subnet.public_1_subnet_us_east_1c.id}"
     associate_public_ip_address = true
     tags {
-        Name = "yutani_fe_loadbalancer"
+        Name = "yutani_fe_loadbalancer-${count.index}"
     }
     
     root_block_device {
         volume_size = "30"
         delete_on_termination = "true"
     }
+    
+    count = "2"
     
     connection {
         type = "ssh"
@@ -85,7 +89,7 @@ resource "aws_instance" "nginx_lb" {
         attributes_json = <<-EOF
                 {
                     "consul": {
-                            "servers": ["consul-0.yutani.it", "consul-1.yutani.it"]
+                            "servers": ["consul-0.yutani.it", "consul-1.yutani.it", "consul-2.yutani.it"]
                       }
                 }
                 EOF
@@ -113,7 +117,7 @@ resource "aws_instance" "nginx_lb" {
 
 resource "aws_instance" "consul_server" {
     ami = "${var.consul_server}"
-    instance_type = "t2.micro"
+    instance_type = "t2.nano"
     key_name = "${var.aws_key_name}"
     iam_instance_profile = "dna_inst_mgmt"
     vpc_security_group_ids = [
@@ -121,7 +125,7 @@ resource "aws_instance" "consul_server" {
         "${aws_security_group.yutani_ssh.id}"
     ]
     
-    subnet_id = "${aws_subnet.private_1_subnet_us_east_1c.id}"
+    subnet_id = "${aws_subnet.public_1_subnet_us_east_1c.id}"
     associate_public_ip_address = true
   tags = {
     Name = "consul_server-${count.index}"
@@ -140,13 +144,13 @@ resource "aws_instance" "consul_server" {
         agent = false
     }
 
-    count = "2"
+    count = "3"
 
     provisioner "chef" {
         attributes_json = <<-EOF
                 {
                     "consul": {
-                            "servers": ["consul-0.yutani.it", "consul-1.yutani.it"]
+                            "servers": ["consul-0.yutani.it", "consul-1.yutani.it", "consul-2.yutani.it"]
                       }
                 }
                 EOF

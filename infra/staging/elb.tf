@@ -2,9 +2,9 @@ resource "aws_elb" "yutani_app" {
   
     name                        = "yutani-terraform-deployment"
     cross_zone_load_balancing   = true
-    instances                   = ["${aws_instance.nginx_lb.id}"]
+    instances                   = ["${aws_instance.nginx_lb.*.id}"]
     security_groups             = ["${aws_security_group.yutani_network_lb.id}"]
-    subnets                     = ["${aws_subnet.private_1_subnet_us_east_1c.id}", "${aws_subnet.private_2_subnet_us_east_1d.id}"]
+    subnets                     = ["${aws_subnet.public_1_subnet_us_east_1c.id}", "${aws_subnet.public_2_subnet_us_east_1d.id}"]
 
     listener {
         instance_port      = 443

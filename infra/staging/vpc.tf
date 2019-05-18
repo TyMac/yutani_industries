@@ -10,24 +10,24 @@ resource "aws_vpc" "yutani_network" {
   }
 }
 
-resource "aws_subnet" "private_1_subnet_us_east_1c" {
+resource "aws_subnet" "public_1_subnet_us_east_1c" {
   vpc_id            = "${aws_vpc.yutani_network.id}"
   cidr_block        = "172.31.2.0/24"
   availability_zone = "us-east-1c"
 
   tags = {
-    "Name"                  = "Subnet private 1 az 1c"
+    "Name"                  = "Subnet public 1 az 1c"
     "Terraform_Managed"     = "True"
   }
 }
 
-resource "aws_subnet" "private_2_subnet_us_east_1d" {
+resource "aws_subnet" "public_2_subnet_us_east_1d" {
   vpc_id            = "${aws_vpc.yutani_network.id}"
   cidr_block        = "172.31.3.0/24"
   availability_zone = "us-east-1d"
 
   tags = {
-    "Name"                  = "Subnet private 2 az 1d"
+    "Name"                  = "Subnet public 2 az 1d"
     "Terraform_Managed"     = "True"
   }
 }
@@ -48,12 +48,12 @@ resource "aws_route" "internet_access" {
 }
 
 resource "aws_route_table_association" "a" {
-  subnet_id      = "${aws_subnet.private_1_subnet_us_east_1c.id}"
+  subnet_id      = "${aws_subnet.public_1_subnet_us_east_1c.id}"
   route_table_id = "${aws_vpc.yutani_network.main_route_table_id}"
 }
 
 resource "aws_route_table_association" "b" {
-  subnet_id      = "${aws_subnet.private_2_subnet_us_east_1d.id}"
+  subnet_id      = "${aws_subnet.public_2_subnet_us_east_1d.id}"
   route_table_id = "${aws_vpc.yutani_network.main_route_table_id}"
 }
 

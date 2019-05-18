@@ -10,3 +10,4 @@
 *.tfvars
 statefile.tf
 terraform.tfvars
+.DS_Store
