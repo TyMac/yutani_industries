@@ -15,3 +15,7 @@ variable "chef_username" {}
 variable "tfstate_key" {}
 variable "tfstate_bucket" {}
 variable "tfstate_region" {}
+
+# variable "target_vpc" {}
+# variable "web_server_count" {}
+# variable "app_server_ip_start" {}

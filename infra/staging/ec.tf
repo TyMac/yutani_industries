@@ -1,3 +1,31 @@
+# data "aws_vpc" "yutani_network" {
+#   filter = {
+#     name = "tag:Name"
+#     values = ["${aws_vpc.yutani_network.id}"]
+#   }
+# }
+
+# data "aws_subnet_ids" "web_tier_ids" {
+#   vpc_id = "${aws_vpc.yutani_network.id}"
+#   tags {
+#     Tier = "Web"
+#   }
+# }
+
+# data "aws_subnet" "web_tier" {
+#   count = "${length(data.aws_subnet_ids.web_tier_ids.ids)}"
+#   id = "${data.aws_subnet_ids.web_tier_ids.ids[count.index]}"
+# }
+
+# data "terraform_remote_state" "terraform-remote-state-yutani-s3" {
+#   backend = "s3"
+#   config {
+#     bucket = "${var.tfstate_bucket}"
+#     key = "${var.tfstate_key}/terraform.tfstate"
+#     region = "${var.tfstate_region}"
+#   }
+# }
+
 resource "aws_instance" "yutani_home" {
     ami = "${var.yutani_home}"
     instance_type = "t2.nano"
@@ -10,9 +38,11 @@ resource "aws_instance" "yutani_home" {
         "${aws_security_group.yutani_ssh.id}"
     ]
     
+    # subnet_id = "${element(aws_subnet_ids.*.ids, count.index)}"
+    # subnet_id = "${element(data.aws_subnet_ids.web_tier_ids.ids, count.index)}"
     subnet_id = "${aws_subnet.public_1_subnet_us_east_1c.id}"
     associate_public_ip_address = true
-    tags {
+    tags = {
         Name = "yutani_fe_homepage-${count.index}"
     }
     
@@ -29,6 +59,7 @@ resource "aws_instance" "yutani_home" {
         private_key = "${file("${var.aws_key_path}")}"
         timeout = "2m"
         agent = false
+        host = self.public_ip
     }
 
     provisioner "chef" {
@@ -64,9 +95,10 @@ resource "aws_instance" "nginx_lb" {
         "${aws_security_group.yutani_ssh.id}"
     ]
     
+    # subnet_id = "${element(data.aws_subnet_ids.web_tier_ids.ids, count.index)}"
     subnet_id = "${aws_subnet.public_1_subnet_us_east_1c.id}"
     associate_public_ip_address = true
-    tags {
+    tags = {
         Name = "yutani_fe_loadbalancer-${count.index}"
     }
     
@@ -83,6 +115,7 @@ resource "aws_instance" "nginx_lb" {
         private_key = "${file("${var.aws_key_path}")}"
         timeout = "2m"
         agent = false
+        host = self.public_ip
     }
 
     provisioner "chef" {
@@ -125,6 +158,7 @@ resource "aws_instance" "consul_server" {
         "${aws_security_group.yutani_ssh.id}"
     ]
     
+    # subnet_id = "${element(data.aws_subnet_ids.web_tier_ids.ids, count.index)}"
     subnet_id = "${aws_subnet.public_1_subnet_us_east_1c.id}"
     associate_public_ip_address = true
   tags = {
@@ -142,6 +176,7 @@ resource "aws_instance" "consul_server" {
         private_key = "${file("${var.aws_key_path}")}"
         timeout = "2m"
         agent = false
+        host = self.public_ip
     }
 
     count = "3"
@@ -181,8 +216,8 @@ resource "aws_route53_zone" "private" {
   }
 }
 
-# resource "aws_route53_zone_association" "yutnai_engineering" {
-#   zone_id = ""
+# resource "aws_route53_zone_association" "private" {
+#   zone_id = "${aws_route53_zone.private.zone_id}"
 #   vpc_id  = "${aws_vpc.yutani_network.id}"
 # }
 
@@ -191,6 +226,6 @@ resource "aws_route53_record" "consul_server" {
   name = "consul-${count.index}"
   type = "A"
   ttl = "3600"
-  count = "2"
+  count = "3"
   records = ["${(aws_instance.consul_server.*.private_ip[count.index])}"]
 }

@@ -17,6 +17,7 @@ resource "aws_subnet" "public_1_subnet_us_east_1c" {
 
   tags = {
     "Name"                  = "Subnet public 1 az 1c"
+    "Tier"                  = "Web"
     "Terraform_Managed"     = "True"
   }
 }
@@ -28,6 +29,7 @@ resource "aws_subnet" "public_2_subnet_us_east_1d" {
 
   tags = {
     "Name"                  = "Subnet public 2 az 1d"
+    "Tier"                  = "Web"
     "Terraform_Managed"     = "True"
   }
 }
@@ -35,9 +37,9 @@ resource "aws_subnet" "public_2_subnet_us_east_1d" {
 resource "aws_internet_gateway" "gw" {
   vpc_id = "${aws_vpc.yutani_network.id}"
 
-  tags {
-    "Name"                  = "InternetGateway"
-    "Terraform_Managed"     = "True"
+  tags = {
+    Name         = "InternetGateway"
+    Terraform_Managed     = "True"
   }
 }
 
@@ -90,10 +92,10 @@ resource "aws_security_group" "yutani_network_web" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags {
-    "Terraform_Managed" = "True"
-    "Name"              = "Web_SG"
-    "Purpose"           = "Web_Communication"
+  tags = {
+    Terraform_Managed = "True"
+    Name              = "Web_SG"
+    Purpose           = "Web_Communication"
   }
 }
 
@@ -124,10 +126,10 @@ resource "aws_security_group" "yutani_network_lb" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags {
-    "Terraform_Managed" = "True"
-    "Name"              = "Load_balancer_SG"
-    "Purpose"           = "LB_Communication"
+  tags = {
+    Terraform_Managed = "True"
+    Name              = "Load_balancer_SG"
+    Purpose           = "LB_Communication"
   }
 }
 
@@ -141,6 +143,7 @@ resource "aws_security_group" "yutani_consul" {
     to_port     = 8301
     protocol    = "udp"
     cidr_blocks = ["172.31.2.0/24", "172.31.3.0/24"]
+    description = "Consul LAN Serf: The Serf LAN port UDP"
   }
 
   ingress {
@@ -148,6 +151,7 @@ resource "aws_security_group" "yutani_consul" {
     to_port     = 8302
     protocol    = "udp"
     cidr_blocks = ["172.31.2.0/24", "172.31.3.0/24"]
+    description = "Consul Wan Serf: The Serf WAN port UDP"
   }
 
   ingress {
@@ -155,6 +159,7 @@ resource "aws_security_group" "yutani_consul" {
     to_port     = 8600
     protocol    = "udp"
     cidr_blocks = ["172.31.2.0/24", "172.31.3.0/24"]
+    description = "Consul DNS: The DNS server UDP"
   }
 
   ingress {
@@ -162,6 +167,7 @@ resource "aws_security_group" "yutani_consul" {
     to_port     = 8300
     protocol    = "tcp"
     cidr_blocks = ["172.31.2.0/24", "172.31.3.0/24"]
+    description = "Consul server: Server RPC address TCP"
   }
 
   ingress {
@@ -169,13 +175,15 @@ resource "aws_security_group" "yutani_consul" {
     to_port     = 8301
     protocol    = "tcp"
     cidr_blocks = ["172.31.2.0/24", "172.31.3.0/24"]
+    description = "Consul LAN Serf: The Serf LAN port TCP"
   }
 
   ingress {
-    from_port   = 8400
-    to_port     = 8400
+    from_port   = 8302
+    to_port     = 8302
     protocol    = "tcp"
     cidr_blocks = ["172.31.2.0/24", "172.31.3.0/24"]
+    description = "Consul Wan Serf: The Serf WAN port TCP"
   }
 
   ingress {
@@ -183,6 +191,15 @@ resource "aws_security_group" "yutani_consul" {
     to_port     = 8500
     protocol    = "tcp"
     cidr_blocks = ["${var.bastion_ip}/32", "172.31.2.0/24", "172.31.3.0/24"]
+    description = "Consul HTTP: The HTTP API (TCP Only)"
+  }
+
+  ingress {
+    from_port   = 8501
+    to_port     = 8501
+    protocol    = "tcp"
+    cidr_blocks = ["${var.bastion_ip}/32", "172.31.2.0/24", "172.31.3.0/24"]
+    description = "Consul HTTPS: The HTTPs API"
   }
 
   ingress {
@@ -190,7 +207,16 @@ resource "aws_security_group" "yutani_consul" {
     to_port     = 8600
     protocol    = "tcp"
     cidr_blocks = ["${var.bastion_ip}/32", "172.31.2.0/24", "172.31.3.0/24"]
-  } 
+    description = "Consul DNS: The DNS server TCP"
+  }
+
+  ingress {
+    from_port   = 21000
+    to_port     = 21255
+    protocol    = "udp"
+    cidr_blocks = ["172.31.2.0/24", "172.31.3.0/24"]
+    description = "Consul Side Car Proxy Min / Max Range"
+  }
 
   egress {
     from_port   = 0
@@ -199,10 +225,10 @@ resource "aws_security_group" "yutani_consul" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags {
-    "Terraform_Managed" = "True"
-    "Name"              = "Consul_SG"
-    "Purpose"           = "Consul_Service_Discovery_Communication"
+  tags = {
+    Terraform_Managed  = "True"
+    Name               = "Consul_SG"
+    Purpose            = "Consul_Service_Discovery_Communication"
   }
 }
 
@@ -229,3 +255,8 @@ resource "aws_security_group" "yutani_ssh" {
     cidr_blocks = ["${var.bastion_ip}/32", "172.31.2.0/24", "172.31.3.0/24"]
   }
 }
+
+# output "web_teir_subnets" {
+#   sensitive = false
+#   value = "${aws_api_gateway_api_key.bday-email.value}"
+# }
