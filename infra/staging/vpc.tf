@@ -10,6 +10,20 @@ resource "aws_vpc" "yutani_network" {
   }
 }
 
+resource "aws_vpc_dhcp_options" "yutani_dns_resolver" {
+  domain_name = "ec2.internal service.consul yutani.it yutani.engineering"
+  domain_name_servers = ["AmazonProvidedDNS"]
+  
+  tags = {
+    Name = "Yutani IT"
+  }
+}
+
+resource "aws_vpc_dhcp_options_association" "yutani_it_resolver" {
+  vpc_id          = "${aws_vpc.yutani_network.id}"
+  dhcp_options_id = "${aws_vpc_dhcp_options.yutani_dns_resolver.id}"
+}
+
 resource "aws_subnet" "public_1_subnet_us_east_1c" {
   vpc_id            = "${aws_vpc.yutani_network.id}"
   cidr_block        = "172.31.2.0/24"
