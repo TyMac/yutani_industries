@@ -1,17 +1,17 @@
 resource "random_id" "home-id" {
   keepers = {
     # Generate a new id each time we change the yutani home server count
-    instance_id = "${var.yutani-home_count}"
+    instance_id = "${var.nginx-web_count}"
   }
 
   byte_length = 8
 }
 
-resource "aws_instance" "yutani-home" {
-    ami = var.yutani-home
+resource "aws_instance" "nginx-web" {
+    ami = var.nginx-web
     instance_type = "t2.nano"
     key_name = var.aws_key_name
-    iam_instance_profile = "dna_inst_mgmt"
+    iam_instance_profile = var.iam_instance_profile
     vpc_security_group_ids = [
         "${aws_security_group.yutani_webserver_consul_connect.id}",
         "${aws_security_group.yutani_network_web.id}",
@@ -22,15 +22,17 @@ resource "aws_instance" "yutani-home" {
     subnet_id = "${aws_subnet.public_1_subnet_us_east_1c.id}"
     associate_public_ip_address = true
     tags = {
-        Name = "yutani-home-${var.blue_green_side}-${count.index}-${random_id.home-id.hex}"
+        Name = "nginx-web-${var.blue_green_side}-${count.index}-${random_id.home-id.hex}"
         ssm_managed = true
         terraform_managed = true
         chef_managed = true
-        policy_name = "yutani-home"
-        policy_group = "aws_stage_enc"
-        consul = true
+        policy_name = "${var.nginx-web_policy_name}"
+        policy_group = "${var.policy_group}"
+        consul_managed = true
         blue_green_side = var.blue_green_side
+        ami = var.nginx-web
         Platform = "Linux"
+        Purpose = "Home Page Web Server"
     }
     
     root_block_device {
@@ -38,7 +40,7 @@ resource "aws_instance" "yutani-home" {
         delete_on_termination = "true"
     }
 
-    count = var.yutani-home_count
+    count = var.nginx-web_count
     
     connection {
         type = "ssh"
@@ -53,14 +55,14 @@ resource "aws_instance" "yutani-home" {
         attributes_json = <<-EOF
                 {
                     "consul": {
-                            "servers": ["provider=aws tag_key=consul tag_value=true"]
+                            "servers": ["provider=aws tag_key=consul_managed tag_value=true"]
                       }
                 }
                 EOF
         use_policyfile = true
-        policy_name = "yutani_page"
-        policy_group = "aws_stage_enc"
-        node_name       = "yutani-home-${var.blue_green_side}-${count.index}-${random_id.home-id.hex}"
+        policy_name = "${var.nginx-web_policy_name}"
+        policy_group = "${var.policy_group}"
+        node_name       = "nginx-web-${var.blue_green_side}-${count.index}-${random_id.home-id.hex}"
         server_url      = var.chef_server_url
         recreate_client = true
         skip_install = true
@@ -83,7 +85,7 @@ resource "aws_instance" "nginx-lb" {
     ami = var.nginx-lb
     instance_type = "t2.nano"
     key_name = var.aws_key_name
-    iam_instance_profile = "dna_inst_mgmt"
+    iam_instance_profile = var.iam_instance_profile
     vpc_security_group_ids = [
         "${aws_security_group.yutani_webserver_consul_connect.id}",
         "${aws_security_group.yutani_network_lb.id}",
@@ -98,11 +100,13 @@ resource "aws_instance" "nginx-lb" {
         ssm_managed = true
         terraform_managed = true
         chef_managed = true
-        policy_name = "nginx_lb"
-        policy_group = "aws_stage_enc"
-        consul = true
+        policy_name = "${var.nginx-lb_policy_name}"
+        policy_group = "${var.policy_group}"
+        consul_managed = true
         blue_green_side = var.blue_green_side
+        ami = var.nginx-lb
         Platform = "Linux"
+        Purpose = "FE Load Balancer"
     }
     
     root_block_device {
@@ -125,13 +129,13 @@ resource "aws_instance" "nginx-lb" {
         attributes_json = <<-EOF
                 {
                     "consul": {
-                            "servers": ["provider=aws tag_key=consul tag_value=true"]
+                            "servers": ["provider=aws tag_key=consul_managed tag_value=true"]
                       }
                 }
                 EOF
         use_policyfile = true
-        policy_name = "nginx_lb"
-        policy_group = "aws_stage_enc"
+        policy_name = "${var.nginx-lb_policy_name}"
+        policy_group = "${var.policy_group}"
         node_name       = "nginx-lb-${var.blue_green_side}-${count.index}-${random_id.lb-id.hex}"
         server_url      = var.chef_server_url
         recreate_client = true
@@ -155,7 +159,7 @@ resource "aws_instance" "consul-server" {
     ami = var.consul-server
     instance_type = "t2.nano"
     key_name = var.aws_key_name
-    iam_instance_profile = "dna_inst_mgmt"
+    iam_instance_profile = var.iam_instance_profile
     vpc_security_group_ids = [
         "${aws_security_group.yutani_consul.id}",
         "${aws_security_group.yutani_ssh.id}"
@@ -168,11 +172,13 @@ resource "aws_instance" "consul-server" {
     ssm_managed = true
     terraform_managed = true
     chef_managed = true
-    policy_name = "consul-server"
-    policy_group = "aws_stage_enc"
-    consul = true
+    policy_name = "${var.consul-server_policy_name}"
+    policy_group = "${var.policy_group}"
+    consul_managed = true
     blue_green_side = var.blue_green_side
+    ami = var.consul-server
     Platform = "Linux"
+    Purpose = "Consul Server"
   }
     
     root_block_device {
@@ -196,13 +202,13 @@ resource "aws_instance" "consul-server" {
                 {
                     "consul": {
                             "count": "${var.consul-server_count}",
-                            "servers": ["provider=aws tag_key=consul tag_value=true"]
+                            "servers": ["provider=aws tag_key=consul_managed tag_value=true"]
                       }
                 }
                 EOF
         use_policyfile = true
-        policy_name = "consul_server"
-        policy_group = "aws_stage_enc"
+        policy_name = "${var.consul-server_policy_name}"
+        policy_group = "${var.policy_group}"
         node_name       = "consul-server-${var.blue_green_side}-${count.index}-${random_id.consul-id.hex}"
         server_url      = var.chef_server_url
         recreate_client = true
@@ -231,13 +237,13 @@ resource "aws_route53_zone" "private" {
 #   vpc_id  = "${aws_vpc.yutani_network.id}"
 # }
 
-resource "aws_route53_record" "yutani-home" {
+resource "aws_route53_record" "nginx-web" {
   zone_id = "${aws_route53_zone.private.zone_id}"
-  name = "yutani-home-${var.blue_green_side}-${count.index}-${random_id.home-id.hex}"
+  name = "nginx-web-${var.blue_green_side}-${count.index}-${random_id.home-id.hex}"
   type = "A"
   ttl = "3600"
-  count = var.yutani-home_count
-  records = [aws_instance.yutani-home[count.index].private_ip]
+  count = var.nginx-web_count
+  records = [aws_instance.nginx-web[count.index].private_ip]
 }
 
 resource "aws_route53_record" "nginx-lb" {
