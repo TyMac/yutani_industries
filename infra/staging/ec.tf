@@ -149,14 +149,14 @@ resource "aws_instance" "nginx-lb" {
 resource "random_id" "consul-id" {
   keepers = {
     # Generate a new id each time we change the consul server count
-    instance_id = "${var.consul-server_count}"
+    instance_id = "${var.infra-server_count}"
   }
 
   byte_length = 8
 }
 
-resource "aws_instance" "consul-server" {
-    ami = var.consul-server
+resource "aws_instance" "infra-server" {
+    ami = var.infra-server
     instance_type = "t2.nano"
     key_name = var.aws_key_name
     iam_instance_profile = var.iam_instance_profile
@@ -168,17 +168,18 @@ resource "aws_instance" "consul-server" {
     subnet_id = "${aws_subnet.public_1_subnet_us_east_1c.id}"
     associate_public_ip_address = true
   tags = {
-    Name = "consul-server-${var.blue_green_side}-${count.index}-${random_id.consul-id.hex}"
+    Name = "infra-server-${var.blue_green_side}-${count.index}-${random_id.consul-id.hex}"
     ssm_managed = true
     terraform_managed = true
     chef_managed = true
-    policy_name = "${var.consul-server_policy_name}"
+    policy_name = "${var.infra-server_policy_name}"
     policy_group = "${var.policy_group}"
     consul_managed = true
+    consul_server = true
     blue_green_side = var.blue_green_side
-    ami = var.consul-server
+    ami = var.infra-server
     Platform = "Linux"
-    Purpose = "Consul Server"
+    Purpose = "Hashicorp Infra Server"
   }
     
     root_block_device {
@@ -195,21 +196,21 @@ resource "aws_instance" "consul-server" {
         host = self.public_ip
     }
 
-    count = var.consul-server_count
+    count = var.infra-server_count
 
     provisioner "chef" {
         attributes_json = <<-EOF
                 {
                     "consul": {
-                            "count": "${var.consul-server_count}",
+                            "count": "${var.infra-server_count}",
                             "servers": ["provider=aws tag_key=consul_managed tag_value=true"]
                       }
                 }
                 EOF
         use_policyfile = true
-        policy_name = "${var.consul-server_policy_name}"
+        policy_name = "${var.infra-server_policy_name}"
         policy_group = "${var.policy_group}"
-        node_name       = "consul-server-${var.blue_green_side}-${count.index}-${random_id.consul-id.hex}"
+        node_name       = "infra-server-${var.blue_green_side}-${count.index}-${random_id.consul-id.hex}"
         server_url      = var.chef_server_url
         recreate_client = true
         skip_install = true
@@ -255,11 +256,11 @@ resource "aws_route53_record" "nginx-lb" {
   records = [aws_instance.nginx-lb[count.index].private_ip]
 }
 
-resource "aws_route53_record" "consul-server" {
+resource "aws_route53_record" "infra-server" {
   zone_id = "${aws_route53_zone.private.zone_id}"
-  name = "consul-server-${var.blue_green_side}-${count.index}-${random_id.consul-id.hex}"
+  name = "infra-server-${var.blue_green_side}-${count.index}-${random_id.consul-id.hex}"
   type = "A"
   ttl = "3600"
-  count = var.consul-server_count
-  records = [aws_instance.consul-server[count.index].private_ip]
+  count = var.infra-server_count
+  records = [aws_instance.infra-server[count.index].private_ip]
 }

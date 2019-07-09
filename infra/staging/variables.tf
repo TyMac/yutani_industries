@@ -6,7 +6,7 @@ variable "aws_key_path" {}
 variable "aws_region" {}
 variable "nginx-web" {}
 variable "nginx-lb" {}
-variable "consul-server" {}
+variable "infra-server" {}
 variable "aws_delegation_id" {}
 variable "chef_server_url" {}
 variable "bastion_ip" {}
@@ -20,7 +20,7 @@ variable "nginx-web_count" {}
 
 variable "nginx-lb_count" {}
 
-variable "consul-server_count" {}
+variable "infra-server_count" {}
 
 variable blue_green_side {}
 
@@ -30,6 +30,6 @@ variable nginx-web_policy_name {}
 
 variable nginx-lb_policy_name {}
 
-variable consul-server_policy_name {}
+variable infra-server_policy_name {}
 
 variable iam_instance_profile {}
